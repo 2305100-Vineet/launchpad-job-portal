@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const { verifyToken } = require('../middleware/authMiddleware');
-const { sendOtpEmail } = require('../config/mailer');
+const { sendOtpEmail, sendWelcomeEmail } = require('../config/mailer');
 const uploadPhoto = require('../config/uploadPhoto');
 const { uploadBuffer } = require('../config/cloudinary');
 
@@ -73,6 +73,11 @@ router.post('/register', async (req, res) => {
     await db.query(
       'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, role]
+    );
+
+        // Fire-and-forget: a slow or failing email must never block or break registration
+    sendWelcomeEmail(email, name, role).catch((err) =>
+      console.error('Welcome email failed:', err.message)
     );
 
     res.status(201).json({ message: 'User registered successfully' });
